@@ -11,6 +11,7 @@ enum DaycastSymbol {
     case clear
     case chevron
     case location
+    case refresh
 
     var systemName: String {
         switch self {
@@ -19,6 +20,7 @@ enum DaycastSymbol {
         case .clear: "xmark.circle.fill"
         case .chevron: "chevron.right"
         case .location: "mappin.and.ellipse"
+        case .refresh: "arrow.clockwise"
         }
     }
 }

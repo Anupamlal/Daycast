@@ -16,21 +16,17 @@ final class DestinationSearchViewModel {
     var recentRecords: [RecentDestinationRecord] = []
     var listMode: DestinationSearchListMode = .recentDestinations
     var searchStatus: DestinationSearchStatus = .idle
-    var isPreparingForecast = false
     var isHistorySheetPresented = false
 
     private let geocodingService: GeocodingServicing?
-    private let forecastService: WeatherForecastServicing?
     private let recentStore: RecentDestinationsStoring?
 
     private var searchTask: Task<Void, Never>?
-    private var preparationTask: Task<Void, Never>?
     private var activeSearchToken = UUID()
 
     init() {
-        geocodingService = OpenMeteoGeocodingService()
-        forecastService = OpenMeteoWeatherForecastService()
-        recentStore = UserDefaultsRecentDestinationsStore()
+        self.geocodingService = OpenMeteoGeocodingService()
+        self.recentStore = UserDefaultsRecentDestinationsStore()
         reloadRecentDestinations()
     }
 
@@ -59,7 +55,7 @@ final class DestinationSearchViewModel {
     }
 
     func reloadRecentDestinations() {
-        recentRecords = recentStore!.loadRecords()
+        recentRecords = recentStore?.loadRecords() ?? []
     }
 
     func queryDidChange() {
@@ -90,18 +86,15 @@ final class DestinationSearchViewModel {
         scheduleSearch()
     }
 
-    func selectSearchResult(_ destination: Destination) {
-        prepareForecast(for: destination)
+    func destinationFromSearchResult(_ destination: Destination) -> Destination {
+        clearQuery()
+        return destination
     }
 
-    func selectRecentDestination(_ record: RecentDestinationRecord) {
-        let destination = record.destination
-        if record.isForecastCacheValid(at: Date()) {
-            recentStore!.recordAccess(to: destination, forecastCachedAt: record.forecastCachedAt)
-            reloadRecentDestinations()
-            return
-        }
-        prepareForecast(for: destination)
+    func destinationFromRecentRecord(_ record: RecentDestinationRecord) -> Destination {
+        recentStore?.recordAccess(to: record.destination, forecastCachedAt: record.forecastCachedAt)
+        reloadRecentDestinations()
+        return record.destination
     }
 
     func presentHistorySheet() {
@@ -122,31 +115,15 @@ final class DestinationSearchViewModel {
 
     private func performSearch(query: String, token: UUID) async {
         do {
-            let results = try await geocodingService!.searchDestinations(query: query)
-            guard token == activeSearchToken else { return }
-            searchResults = results
-            searchStatus = results.isEmpty ? .noResults : .idle
+            if let results = try await geocodingService?.searchDestinations(query: query) {
+                guard token == activeSearchToken else { return }
+                searchResults = results
+                searchStatus = results.isEmpty ? .noResults : .idle
+            }
         } catch {
             guard token == activeSearchToken else { return }
             searchResults = []
             searchStatus = .failed
-        }
-    }
-
-    private func prepareForecast(for destination: Destination) {
-        preparationTask?.cancel()
-        isPreparingForecast = true
-        clearQuery()
-
-        preparationTask = Task {
-            do {
-                _ = try await forecastService!.prefetchForecast(for: destination)
-                recentStore!.recordAccess(to: destination, forecastCachedAt: Date())
-            } catch {
-                recentStore!.recordAccess(to: destination, forecastCachedAt: nil)
-            }
-            reloadRecentDestinations()
-            isPreparingForecast = false
         }
     }
 

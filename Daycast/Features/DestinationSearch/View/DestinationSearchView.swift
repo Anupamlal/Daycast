@@ -9,10 +9,11 @@ import SwiftUI
 
 struct DestinationSearchView: View {
     @State private var viewModel = DestinationSearchViewModel()
+    @State private var navigationPath = NavigationPath()
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 DaycastAssetColor.canvasWarm.color
                     .ignoresSafeArea()
@@ -38,18 +39,26 @@ struct DestinationSearchView: View {
                     .padding(.horizontal, DaycastLayoutMetric.screenHorizontalPadding.value)
                     .padding(.vertical, 20)
                 }
-
-                if viewModel.isPreparingForecast {
-                    forecastPreparationOverlay
-                }
             }
             .navigationBarHidden(true)
             .onAppear { viewModel.onAppear() }
             .sheet(isPresented: $viewModel.isHistorySheetPresented) {
                 DestinationHistorySheetView(
                     records: viewModel.recentRecords,
-                    onSelect: { viewModel.selectRecentDestination($0) }
+                    onSelect: { record in
+                        navigationPath.append(viewModel.destinationFromRecentRecord(record))
+                    }
                 )
+            }
+            .navigationDestination(for: Destination.self) { destination in
+                ActivityOverviewView(
+                    destination: destination,
+                    onChangeDestination: { navigationPath = NavigationPath() },
+                    onSelectActivity: { navigationPath.append($0) }
+                )
+            }
+            .navigationDestination(for: ActivityRankingRoute.self) { route in
+                ActivityRankingPlaceholderView(route: route)
             }
         }
     }
@@ -98,7 +107,7 @@ struct DestinationSearchView: View {
 
                 ForEach(viewModel.previewRecentRecords) { record in
                     RecentDestinationRow(record: record) {
-                        viewModel.selectRecentDestination(record)
+                        navigationPath.append(viewModel.destinationFromRecentRecord(record))
                     }
                 }
             } else {
@@ -114,7 +123,7 @@ struct DestinationSearchView: View {
             if viewModel.searchStatus == .idle {
                 ForEach(viewModel.searchResults) { destination in
                     DestinationSearchResultRow(destination: destination) {
-                        viewModel.selectSearchResult(destination)
+                        navigationPath.append(viewModel.destinationFromSearchResult(destination))
                     }
                 }
             }
@@ -123,27 +132,6 @@ struct DestinationSearchView: View {
 
     private var shouldShowExplainerCard: Bool {
         dynamicTypeSize <= .accessibility2
-    }
-
-    private var forecastPreparationOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.2)
-                .ignoresSafeArea()
-
-            VStack(spacing: 12) {
-                ProgressView()
-                Text(DestinationSearchText.preparingForecast.value)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(DaycastAssetColor.primaryNavy.color)
-            }
-            .padding(24)
-            .background(
-                RoundedRectangle(cornerRadius: DaycastLayoutMetric.cardCornerRadius.value, style: .continuous)
-                    .fill(Color(.systemBackground))
-            )
-            .padding()
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 

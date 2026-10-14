@@ -8,7 +8,7 @@
 import Foundation
 
 protocol WeatherForecastServicing: Sendable {
-    func prefetchForecast(for destination: Destination) async throws -> CachedForecastSnapshot
+    func fetchForecast(for destination: Destination) async throws -> DestinationForecastBundle
 }
 
 struct OpenMeteoWeatherForecastService: WeatherForecastServicing {
@@ -18,18 +18,24 @@ struct OpenMeteoWeatherForecastService: WeatherForecastServicing {
         self.httpClient = httpClient
     }
 
-    func prefetchForecast(for destination: Destination) async throws -> CachedForecastSnapshot {
+    func fetchForecast(for destination: Destination) async throws -> DestinationForecastBundle {
         let endpoint = OpenMeteoEndpoint.forecast(
             latitude: destination.latitude,
             longitude: destination.longitude,
             forecastDays: OpenMeteoRequestParameter.forecastDayCount.intValue
         )
         let data = try await httpClient.data(from: endpoint.url)
-        let response = try JSONDecoder().decode(OpenMeteoForecastResponse.self, from: data)
-        let dayCount = response.daily?.time.count ?? 0
-        return CachedForecastSnapshot(
-            destinationID: destination.id,
-            dayCount: dayCount,
+        let response: OpenMeteoForecastResponse
+        do {
+            response = try JSONDecoder().decode(OpenMeteoForecastResponse.self, from: data)
+        } catch {
+            throw OpenMeteoServiceError.decodingFailed
+        }
+        let days = response.daily?.forecastDays() ?? []
+        return DestinationForecastBundle(
+            destination: destination,
+            timezoneIdentifier: response.timezone ?? OpenMeteoRequestParameter.autoTimezone.value,
+            days: days,
             fetchedAt: Date()
         )
     }

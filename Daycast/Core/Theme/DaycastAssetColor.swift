@@ -13,6 +13,9 @@ enum DaycastAssetColor: String {
     case canvasWarm = "CanvasWarm"
     case rowBorder = "RowBorder"
     case secondaryText = "SecondaryText"
+    case suitableGreen = "SuitableGreen"
+    case uncertainAmber = "UncertainAmber"
+    case notSuitableRed = "NotSuitableRed"
 
     var color: Color {
         Color(rawValue)

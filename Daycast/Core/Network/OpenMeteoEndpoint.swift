@@ -30,6 +30,7 @@ enum OpenMeteoEndpoint {
                 URLQueryItem(name: "longitude", value: String(longitude)),
                 URLQueryItem(name: "forecast_days", value: String(forecastDays)),
                 URLQueryItem(name: "timezone", value: OpenMeteoRequestParameter.autoTimezone.value),
+                URLQueryItem(name: "daily", value: OpenMeteoDailyVariable.combinedRequestValue),
             ]
             return components.url!
         }
