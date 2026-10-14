@@ -11,7 +11,7 @@ import SwiftUI
 struct DaycastApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            DestinationSearchView()
         }
     }
 }
