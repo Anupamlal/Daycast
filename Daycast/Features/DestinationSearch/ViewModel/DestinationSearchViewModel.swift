@@ -18,15 +18,18 @@ final class DestinationSearchViewModel {
     var searchStatus: DestinationSearchStatus = .idle
     var isHistorySheetPresented = false
 
-    private let geocodingService: GeocodingServicing?
-    private let recentStore: RecentDestinationsStoring?
+    private let geocodingRepository: GeocodingRepository
+    private let recentStore: RecentDestinationsStoring
 
     private var searchTask: Task<Void, Never>?
     private var activeSearchToken = UUID()
 
-    init() {
-        self.geocodingService = OpenMeteoGeocodingService()
-        self.recentStore = UserDefaultsRecentDestinationsStore()
+    init(
+        geocodingRepository: GeocodingRepository = OpenMeteoGeocodingRepository(),
+        recentStore: RecentDestinationsStoring = UserDefaultsRecentDestinationsStore()
+    ) {
+        self.geocodingRepository = geocodingRepository
+        self.recentStore = recentStore
         reloadRecentDestinations()
     }
 
@@ -55,7 +58,7 @@ final class DestinationSearchViewModel {
     }
 
     func reloadRecentDestinations() {
-        recentRecords = recentStore?.loadRecords() ?? []
+        recentRecords = recentStore.loadRecords()
     }
 
     func queryDidChange() {
@@ -92,7 +95,7 @@ final class DestinationSearchViewModel {
     }
 
     func destinationFromRecentRecord(_ record: RecentDestinationRecord) -> Destination {
-        recentStore?.recordAccess(to: record.destination, forecastCachedAt: record.forecastCachedAt)
+        recentStore.recordAccess(to: record.destination, forecastCachedAt: record.forecastCachedAt)
         reloadRecentDestinations()
         return record.destination
     }
@@ -115,11 +118,10 @@ final class DestinationSearchViewModel {
 
     private func performSearch(query: String, token: UUID) async {
         do {
-            if let results = try await geocodingService?.searchDestinations(query: query) {
-                guard token == activeSearchToken else { return }
-                searchResults = results
-                searchStatus = results.isEmpty ? .noResults : .idle
-            }
+            let results = try await geocodingRepository.searchDestinations(query: query)
+            guard token == activeSearchToken else { return }
+            searchResults = results
+            searchStatus = results.isEmpty ? .noResults : .idle
         } catch {
             guard token == activeSearchToken else { return }
             searchResults = []

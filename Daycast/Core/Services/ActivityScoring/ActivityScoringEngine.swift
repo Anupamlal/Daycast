@@ -13,6 +13,17 @@ struct ActivityDailyScore: Sendable, Equatable {
 }
 
 struct ActivityScoringEngine: Sendable {
+    func evaluateDay(day: ForecastDay, activity: Activity) -> ActivityDayEvaluation? {
+        guard let score = score(day: day, activity: activity) else { return nil }
+        return ActivityDayEvaluation(
+            score: score,
+            tier: SuitabilityTier.from(score: score),
+            summaryExplanation: ActivityDayExplanationBuilder.summary(for: activity, day: day, score: score),
+            factors: ActivityFactorImpactBuilder.factors(for: activity, day: day),
+            safetyCaution: SevereWeatherDetector.cautionMessage(for: day)
+        )
+    }
+
     func buildOutlooks(for bundle: DestinationForecastBundle) -> [ActivityOutlookSummary] {
         Activity.allCases.map { activity in
             buildOutlook(for: activity, days: bundle.days)

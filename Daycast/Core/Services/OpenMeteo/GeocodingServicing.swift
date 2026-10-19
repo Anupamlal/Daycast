@@ -26,7 +26,7 @@ struct OpenMeteoGeocodingService: GeocodingServicing {
         let data = try await httpClient.data(from: endpoint.url)
         do {
             let response = try JSONDecoder().decode(OpenMeteoGeocodingResponse.self, from: data)
-            return response.results?.map { $0.asDestination() } ?? []
+            return OpenMeteoGeocodingMapper.map(response: response)
         } catch {
             throw OpenMeteoServiceError.decodingFailed
         }

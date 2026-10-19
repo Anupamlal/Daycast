@@ -12,11 +12,6 @@ struct DestinationForecastBundle: Codable, Sendable, Equatable {
     let timezoneIdentifier: String
     let days: [ForecastDay]
     let fetchedAt: Date
-
-    func isCacheValid(at referenceDate: Date) -> Bool {
-        let lifetime = TimeInterval(DestinationSearchPolicy.forecastCacheLifetimeSeconds.intValue)
-        return referenceDate.timeIntervalSince(fetchedAt) < lifetime
-    }
 }
 
 struct ForecastDay: Codable, Sendable, Equatable, Identifiable {

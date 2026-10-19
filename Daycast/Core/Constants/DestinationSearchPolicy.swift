@@ -18,7 +18,7 @@ enum DestinationSearchPolicy {
         case .minimumQueryLength: 2
         case .debounceMilliseconds: 300
         case .recentPreviewLimit: 3
-        case .forecastCacheLifetimeSeconds: 3_600
+        case .forecastCacheLifetimeSeconds: ForecastCachePolicy.timeToLiveSeconds.intValue
         }
     }
 

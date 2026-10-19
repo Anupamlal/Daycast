@@ -13,6 +13,7 @@ enum ActivityText {
     case outdoorSightseeingName
     case indoorSightseeingName
     case surfingProxyDisclosure
+    case surfingRankingDisclosure
 
     var value: String {
         switch self {
@@ -21,6 +22,7 @@ enum ActivityText {
         case .outdoorSightseeingName: "Outdoor Sightseeing"
         case .indoorSightseeingName: "Indoor Sightseeing"
         case .surfingProxyDisclosure: "Weather proxy — wave conditions unavailable"
+        case .surfingRankingDisclosure: "Weather proxy — wave and swell conditions are not available."
         }
     }
 }

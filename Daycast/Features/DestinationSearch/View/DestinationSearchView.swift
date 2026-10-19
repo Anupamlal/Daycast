@@ -58,7 +58,7 @@ struct DestinationSearchView: View {
                 )
             }
             .navigationDestination(for: ActivityRankingRoute.self) { route in
-                ActivityRankingPlaceholderView(route: route)
+                ActivityRankingView(route: route)
             }
         }
     }

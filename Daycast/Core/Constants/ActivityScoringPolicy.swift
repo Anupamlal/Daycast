@@ -15,7 +15,7 @@ enum ActivityScoringPolicy {
     var intValue: Int {
         switch self {
         case .suitableDayThreshold: 70
-        case .uncertainThreshold: 50
+        case .uncertainThreshold: 45
         case .forecastDayCount: 7
         }
     }
@@ -26,13 +26,17 @@ enum SuitabilityTier {
     case uncertain
     case notSuitable
 
-    static func from(averageScore: Int) -> SuitabilityTier {
-        if averageScore >= ActivityScoringPolicy.suitableDayThreshold.intValue {
+    static func from(score: Int) -> SuitabilityTier {
+        if score >= ActivityScoringPolicy.suitableDayThreshold.intValue {
             return .suitable
         }
-        if averageScore >= ActivityScoringPolicy.uncertainThreshold.intValue {
+        if score >= ActivityScoringPolicy.uncertainThreshold.intValue {
             return .uncertain
         }
         return .notSuitable
+    }
+
+    static func from(averageScore: Int) -> SuitabilityTier {
+        from(score: averageScore)
     }
 }

@@ -15,22 +15,19 @@ final class ActivityOverviewViewModel {
 
     var presentationState: ActivityOverviewPresentationState = .loading
 
-    private let forecastService: WeatherForecastServicing
-    private let forecastCache: ForecastCacheStoring
+    private let forecastRepository: ForecastRepository
     private let recentStore: RecentDestinationsStoring
     private let scoringEngine: ActivityScoringEngine
     private var loadTask: Task<Void, Never>?
 
     init(
         destination: Destination,
-        forecastService: WeatherForecastServicing = OpenMeteoWeatherForecastService(),
-        forecastCache: ForecastCacheStoring = UserDefaultsForecastCacheStore(),
+        forecastRepository: ForecastRepository = OpenMeteoForecastRepository(),
         recentStore: RecentDestinationsStoring = UserDefaultsRecentDestinationsStore(),
         scoringEngine: ActivityScoringEngine = ActivityScoringEngine()
     ) {
         self.destination = destination
-        self.forecastService = forecastService
-        self.forecastCache = forecastCache
+        self.forecastRepository = forecastRepository
         self.recentStore = recentStore
         self.scoringEngine = scoringEngine
     }
@@ -50,12 +47,12 @@ final class ActivityOverviewViewModel {
     }
 
     private func loadInitialForecast(forceNetwork: Bool = false) async {
-        if !forceNetwork, let cached = forecastCache.loadBundle(for: destination.id) {
+        if !forceNetwork, let cached = forecastRepository.cachedForecast(for: destination.id) {
             let content = buildContent(from: cached, showsStaleNotice: false, showsRefreshFailureNotice: false)
             presentationState = .loaded(content)
             recentStore.recordAccess(to: destination, forecastCachedAt: cached.fetchedAt)
 
-            if cached.isCacheValid(at: Date()) {
+            if forecastRepository.isCacheValid(cached, at: Date()) {
                 return
             }
 
@@ -66,7 +63,7 @@ final class ActivityOverviewViewModel {
         }
 
         presentationState = .loading
-        await fetchAndPresent(showRefreshFailureNotice: false, replacingStateOnFailure: true)
+        await fetchAndPresent(showRefreshFailureNotice: false, replacingStateOnFailure: true, forceNetwork: forceNetwork)
     }
 
     private func refreshForecast(showStaleOnFailure: Bool = false) async {
@@ -76,22 +73,30 @@ final class ActivityOverviewViewModel {
             presentationState = .refreshing(content)
         }
 
-        await fetchAndPresent(showRefreshFailureNotice: showStaleOnFailure, replacingStateOnFailure: false)
+        await fetchAndPresent(
+            showRefreshFailureNotice: showStaleOnFailure,
+            replacingStateOnFailure: false,
+            forceNetwork: true
+        )
     }
 
-    private func fetchAndPresent(showRefreshFailureNotice: Bool, replacingStateOnFailure: Bool) async {
+    private func fetchAndPresent(
+        showRefreshFailureNotice: Bool,
+        replacingStateOnFailure: Bool,
+        forceNetwork: Bool
+    ) async {
+        let intent: ForecastRefreshIntent = forceNetwork ? .forceNetwork : .preferCache
         do {
-            let bundle = try await forecastService.fetchForecast(for: destination)
-            forecastCache.saveBundle(bundle)
-            recentStore.recordAccess(to: destination, forecastCachedAt: bundle.fetchedAt)
+            let result = try await forecastRepository.loadForecast(for: destination, intent: intent)
+            recentStore.recordAccess(to: destination, forecastCachedAt: result.bundle.fetchedAt)
             let content = buildContent(
-                from: bundle,
+                from: result.bundle,
                 showsStaleNotice: false,
                 showsRefreshFailureNotice: false
             )
             presentationState = .loaded(content)
         } catch {
-            let cached = forecastCache.loadBundle(for: destination.id)
+            let cached = forecastRepository.cachedForecast(for: destination.id)
             if let cached {
                 let content = buildContent(
                     from: cached,

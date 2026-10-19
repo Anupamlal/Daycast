@@ -31,12 +31,14 @@ struct OpenMeteoWeatherForecastService: WeatherForecastServicing {
         } catch {
             throw OpenMeteoServiceError.decodingFailed
         }
-        let days = response.daily?.forecastDays() ?? []
-        return DestinationForecastBundle(
-            destination: destination,
-            timezoneIdentifier: response.timezone ?? OpenMeteoRequestParameter.autoTimezone.value,
-            days: days,
-            fetchedAt: Date()
-        )
+        do {
+            return try OpenMeteoForecastMapper.map(
+                response: response,
+                destination: destination,
+                fetchedAt: Date()
+            )
+        } catch {
+            throw OpenMeteoServiceError.decodingFailed
+        }
     }
 }
